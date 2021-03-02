@@ -253,3 +253,30 @@ public class CyclicBarrier {
 
 ## Semaphore
 Semaphore 类似于操作系统中的信号量，可以控制互斥资源的访问线程数。
+
+# J.U.C - 其它组件
+
+## FutureTask
+Callable 可以有返回值，返回值通过 Future<V> 进行封装。
+FutureTask 实现了 RunnableFuture 接口，该接口继承自 Runnable 和 Future<V> 接口，这使得 FutureTask 既可以当作一个任务执行，也可以有返回值。
+
+FutureTask 可用于异步获取执行结果或取消执行任务的场景。
+当一个计算任务需要执行很长时间，那么就可以用 FutureTask 来封装这个任务，主线程在完成自己的任务之后再去获取结果。
+
+## BlockingQueue
+`java.util.concurrent.BlockingQueue` 接口具有以下阻塞队列的实现：
+- FIFO 队列：LinkedBlockingQueue, ArrayBlockingQueue (fixed length)
+- 优先级队列：PriorityBlockingQueue
+
+提供了阻塞的 take() and put(): 如果队列为空 take() 将阻塞，直到队列中有内容；如果队列为满 put() 将阻塞，直到队列有空闲位置。
+
+## ForkJoin
+主要用于并行计算，和 MapReduce 原理类似，都是把大的任务拆分成多个小任务并行计算。
+
+ForkJoinPool 实现了工作窃取算法来提高 CPU 的利用率。
+每个线程都维护了一个双端队列，用来存储需要执行的任务。
+工作窃取算法允许空闲的线程从其它线程的双端队列中窃取一个任务来执行。
+窃取的任务必须是 oldest, 避免和队列所属线程发生竞争
+下图中，Thread2 从 Thread1 的队列中拿出最晚的任务 Task1， Thread1 会拿出 Task2 来执行，这样就比避免了发生竞争。
+但是如果队列中只有一个任务，则竞争还是会发生。
+![ForkJoinPool](./images/ForkJoinPool.jpg)
