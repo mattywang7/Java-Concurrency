@@ -1,4 +1,4 @@
-# 使用线程
+# 一、使用线程
 
 有3种使用线程的方法
 - 实现Runnable接口
@@ -35,3 +35,116 @@ public class MyRunnable implements Runnable {
 实现接口会更好一些，因为：
 - Java不支持多重继承，因此继承了Thread类就无法继承其他类，但是可以实现多个接口
 - 类可能只要求可执行就行，继承整个Thread类开销过大
+
+# 二、基础线程机制
+
+## Executor
+
+Executor管理多个异步任务的执行，而无需程序员显示地管理线程的生命周期。
+这里的异步是指多个任务的执行不受干扰，不需要进行同步操作。
+
+主要有3中Executor:
+- CachedThreadPool: 一个任务创建一个线程
+- FixedThreadPool: 所有任务只能使用固定大小的线程
+- SingleThreadExecutor: 相当于大小为1的FixedThreadPool
+
+## Daemon
+
+守护线程是程序运行时在后台提供服务的线程，不属于程序中不可或缺的部分。
+当所有非守护线程结束时，程序也就终止，同时会杀死所有守护线程。
+main()属于非守护线程。
+在线程启动之前使用setDaemon()可以将一个线程设置为守护线程。
+
+## sleep()
+
+`Thread.sleep(millisec)` 会休眠当前正在执行的线程。
+`sleep()`可能会抛出`InterruptedException`, 因为异常不能跨线程传播回main()中，因此必须在本地进行处理。
+线程中抛出的其他异常也同样需要在本地进行处理。
+
+## yield()
+
+对静态方法Thread.yield()的调用声明了当前线程已经完成了生命周期中最重要的部分，可以切换给其他线程来执行。
+该方法只是对线程调度器的一个建议，而且也只是建议具有相同优先级的其他线程可以运行。
+
+# 三、中断
+
+一个线程执行完毕之后会自动结束，如果在运行过程中发生异常也会提前结束。
+
+## InterruptedException
+
+通过调用一个线程的interrupt()来中断该线程，如果该线程处于阻塞、限期等待或者无限期等待状态，那么就会抛出InterruptedException，
+从而提前结束该线程，不执行之后的语句。
+
+## interrupted()
+
+如果一个线程的run()方法执行一个无限循环，并且没有执行sleep()等会抛出InterruptedException的操作，那么调用线程的interrupt()方法就无法使线程提前结束。
+但是调用interrupt()会设置线程的中断标记，此时调用interrupted()会返回true。
+因此可以在循环体中使用interrupted()来判断线程是否处于中断状态，从而提前结束线程。
+
+## Executor的中断操作
+
+调用Executor的shutdown()方法会等待线程都执行完毕之后再关闭，但是如果调用的是shutdownNow()，则相当于调用每个线程的interrupt()方法。
+
+如果只想中断Executor中的一个线程，可以通过使用submit()来提交一个线程，它会返回一个`Future<?>`对象，通过调用该对象`cancel(true)`方法就可以中断该线程。
+
+# 四、互斥同步
+
+Java提供了两种锁机制来控制多个线程对共享资源的互斥访问，第一个是JVM实现的`synchronized`, 而另一个是JDK实现的`ReentrantLock`.
+
+## synchronized
+
+### 同步一个代码块：
+```
+public void func() {
+    synchronized (this) {
+        // ...
+    }
+}
+```
+它只作用同一个对象，如果调用两个对象上的同步代码块，就不会进行同步。
+
+### 同步一个方法：
+```
+public synchronized void func() {
+    // ...
+}
+```
+和同步代码块一样，作用于同一个对象。
+
+### 同步一个类
+```
+public void func() {
+    synchronized (SynchronizedExample.class) {
+        // ...
+    }
+}
+```
+作用于一整个类，也就是说两个线程调用同一个类的不同对象上的这种同步语句，也会进行同步。
+
+### 同步一个静态方法
+```
+public synchronized static void func() {
+    // ...
+}
+```
+作用于整个类
+
+## ReentrantLock
+
+ReentrantLock是`java.util.concurrent`中的锁
+
+## 比较
+- synchronized 是JVM实现的，而ReentrantLock是JDK实现的
+- 新版本Java对synchronized进行了很多优化，例如自旋锁等，synchronized与而ReentrantLock性能大致相同
+- 当持有锁的线程长期不释放锁的时候，正在等待的线程可以选择放弃等待，改为处理其他事情。
+ReentrantLock可中断，synchronized则不行。
+  
+- 公平锁是指多个线程在等待同一个锁时，必须按照申请锁的时间顺序来依次获得锁
+  synchronized的锁是非公平的，ReentrantLock默认情况下也是非公平的，但是也可以是公平的。
+  
+- 一个ReentrantLock可以同时绑定多个Condition对象
+
+## 使用选择
+除非需要使用ReentrantLock的高级功能，否则优先使用synchronized。
+这是因为synchronized是JVM实现的一种锁机制，JVM原生地支持它，而 ReentrantLock 不是所有的JDK版本都支持。
+并且使用 synchronized 不用担心没有释放锁而导致死锁问题，因为JVM会确保锁的释放。
