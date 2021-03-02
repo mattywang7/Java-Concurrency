@@ -148,3 +148,31 @@ ReentrantLock可中断，synchronized则不行。
 除非需要使用ReentrantLock的高级功能，否则优先使用synchronized。
 这是因为synchronized是JVM实现的一种锁机制，JVM原生地支持它，而 ReentrantLock 不是所有的JDK版本都支持。
 并且使用 synchronized 不用担心没有释放锁而导致死锁问题，因为JVM会确保锁的释放。
+
+# 五、线程之间的协作
+当多个线程可以一起工作去解决某个问题时，如果某些部分必须在其它部分之前完成，那么就需要对线程进行协调。
+
+## join()
+在线程中调用另一个线程的join(), 会将当前线程挂起，而不是忙等待，直到目标线程结束。
+
+## wait(), notify(), and notifyAll()
+调用 wait() 使得线程等待某个条件满足，线程在等待时会被挂起，当其它线程的运行使得这个条件满足时，
+其它线程会调用 notify() 或者 notifyAll() 来唤醒挂起的线程。
+
+它们都属于 Object 的一部分，而不属于Thread.
+
+只能用在同步方法或者同步控制块中，否则会在运行时抛出 IllegalMonitorStateException.
+
+使用 wait() 挂起期间，线程会释放锁。
+这是因为，如果没有释放锁，那么其它线程就无法进入对象的同步方法或者同步控制块中，
+那么就无法执行 notify() 或者 notifyAll() 来唤醒等待的线程，造成死锁。
+
+## wait() VS sleep()
+- wait() 是 Object 的方法，而 sleep() 是 Thread 的静态方法。
+- wait() 会释放锁，而 sleep() 不会。
+
+## await(), signal(), and signalAll()
+`java.util.concurrent` 提供了 Condition 类来实现线程之间的协调，
+可以在 Condition 上调用 await() 是线程等待，其它线程调用 signal() 或者 signalAll() 方法唤醒等待的线程。
+
+相比于 wait(), await() 可以指定等待的条件，因此更加灵活。
