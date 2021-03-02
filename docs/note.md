@@ -220,3 +220,36 @@ ReentrantLock可中断，synchronized则不行。
 
 ## 死亡 (Terminated)
 可以是线程结束任务之后自己结束，或者产生了异常结束。
+
+# J.U.C - AQS
+
+`java.util.concurrent` 大大提升了并发性能，AQS被认为是 J.U.C 的核心。
+
+## CountDownLatch
+用来控制一个线程或多个线程等待多个线程.
+维护了一个计数器cnt, 每次调用countDown()会让计数器的值减1， 减到0的时候，那些因为调用await()而在等待的线程就会被唤醒。
+
+## CyclicBarrier
+
+用来控制多个线程互相等待，只有当多个线程都到达时，这些线程才会继续执行。
+和 CountDownLatch 类似，都是通过维护计数器来实现的。
+线程执行 await() 之后计数器会减1，并进行等待，直到计数器为0，所有调用 await() 而在等待的线程才能继续执行。
+
+CyclicBarrier 和 CountDownLatch 的一个区别是，CyclicBarrier 的计数器通过调用 reset() 可以循环使用，所以它才叫循环屏障。
+
+CyclicBarrier 有两个构造函数，其中 parties 只是计数器的初始值，barrierAction 在所有线程都到达屏障的时候会执行一次。
+```java
+public class CyclicBarrier {
+    
+    public CyclicBarrier(int parties, Runnable barrierAction) {
+        // ...
+    }
+    
+    public CyclicBarrier(int parties) {
+        this(parties, null);
+    }
+}
+```
+
+## Semaphore
+Semaphore 类似于操作系统中的信号量，可以控制互斥资源的访问线程数。
