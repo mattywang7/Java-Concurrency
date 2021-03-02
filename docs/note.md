@@ -279,4 +279,9 @@ ForkJoinPool 实现了工作窃取算法来提高 CPU 的利用率。
 窃取的任务必须是 oldest, 避免和队列所属线程发生竞争
 下图中，Thread2 从 Thread1 的队列中拿出最晚的任务 Task1， Thread1 会拿出 Task2 来执行，这样就比避免了发生竞争。
 但是如果队列中只有一个任务，则竞争还是会发生。
+
 ![ForkJoinPool](./images/ForkJoinPool.jpg)
+
+# 九、线程不安全示例
+
+如果多个线程对同一个共享数据进行访问而不采取同步措施的话，那么操作的结果是不一致的。
