@@ -176,3 +176,47 @@ ReentrantLock可中断，synchronized则不行。
 可以在 Condition 上调用 await() 是线程等待，其它线程调用 signal() 或者 signalAll() 方法唤醒等待的线程。
 
 相比于 wait(), await() 可以指定等待的条件，因此更加灵活。
+
+# 六、线程状态
+一个线程只能处于一种状态，并且这里的线程状态特质 Java 虚拟机的线程状态，不能反映线程在特定操作系统下的状态。
+
+## 新建 (New)
+创建后尚未启动。
+
+## 可运行 (Runnable)
+正在 Java 虚拟机中运行。
+但是在操作系统层面，也可能等待资源调度（例如处理器资源），资源调度完成后就进入运行状态。
+所以该状态的可运行是指可以被运行，具体有没有运行要看底层操作系统的资源调度。
+
+## 阻塞 (Block)
+请求获取 monitor lock 从而进入 synchronized 函数或者代码块，但是其它线程已经占用了该 monitor lock，所以出于阻塞状态。
+要结束该状态进入从而 Runnable 需要其他线程释放 monitor lock。
+
+## 无限期等待 (Waiting)
+等待其它线程显示地唤醒。
+阻塞和等待的区别在于，阻塞是被动的，它是在等待获取 monitor lock。
+而等待是主动的，通过调用 Object.wait() 等方法进入该状态。
+
+| 进入方法 | 退出方法 |
+| --- | --- |
+| 没有设置 Timeout 参数的 Object.wait() | {Object.notify() or Object.notifyAll()} by other threads |
+| 没有设置 Timeout 参数的 Thread.join() | 被调用的线程执行完毕 |
+| LockSupport.park() | LockSupport.unpack(Thread) |
+
+## 限期等待 (Timed_waiting)
+无需等待其它线程显示地唤醒，在一定时间之后会被系统自动唤醒。
+
+| 进入方法 | 退出方法|
+| --- | --- |
+| Thread.sleep() | 时间结束 |
+| 设置了 Timeout 参数的 Object.wait() | 时间结束 or Object.notify() or Object.notifyAll() |
+| 设置了 Timeout 参数的 Thread.join() | 时间结束 or 被调用的线程执行完毕 |
+| LockSupport.parkNanos() | LockSupport.unpack(Thread) |
+| LockSupport.parkUntil() | LockSupport.unpack(Thread) |
+
+调用 Thread.sleep() 方法使线程进入限期等待状态时，常常用“使一个线程睡眠”进行描述。
+调用 Object.wait() 方法使线程进入限期等待或者无限期等待时，常常用“挂起一个线程”进行描述。
+睡眠和挂起是用来描述行为，而阻塞和等待用来描述状态。
+
+## 死亡 (Terminated)
+可以是线程结束任务之后自己结束，或者产生了异常结束。
