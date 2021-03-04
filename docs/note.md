@@ -483,3 +483,48 @@ J.U.C 包提供了一个带有标记的原子引用类 AtomicStampedReference �
 ThreadLocal 理论上来讲不是用来解决多线程并发问题的，因为根本不存在多线程竞争。
 在一些场景（尤其是使用线程池）下，由于 ThreadLocal.ThreadLocalMap 的底层数据结构导致 ThreadLocal有内存泄漏的情况。
 应该尽可能在每次使用 ThreadLocal 后手动调用 remove(), 以避免出现 ThreadLocal 经典的内存泄漏甚至是造成自身业务混乱的风险。
+
+# 十二、锁优化
+这里的锁优化主要指的是 JVM 对 synchronized 的优化
+
+## 自旋锁
+互斥同步进入阻塞状态的开销都很大，应该尽量避免。
+在许多应用中，共享数据的锁定状态只会持续很短的一段时间。
+自旋锁的思想是让一个线程在请求一个共享数据的锁时执行忙循环（自旋）一段时间，如果在这段时间内能获得锁，就可以避免进入阻塞状态。
+
+自旋锁虽然能避免进入阻塞状态从而减少开销，但是它需要进行忙循环操作占用 CPU 时间，它只适用于共享数据的锁定状态很短的场景。
+
+在 JDK1.6 中引入了自适应的自旋锁。
+自适应意味着自选的次数不在固定了，而是由前一次在同一个锁上的自旋次数及锁的拥有者的状态来决定。
+
+## 锁消除
+是指对于被检测出不可能存在竞争的共享数据的锁进行消除。
+
+锁消除主要通过逃逸分析来支持，如果堆上的共享数据不可能逃逸出去被其它线程访问到，那么就可以把它们当成私有数据对待，也就可以将它们的锁进行消除。
+
+String 是一个不可变的类，编译器会对 String 的拼接自动优化。
+在 JDK1.5 之前，会转化为 StringBuffer 对象的连续 append() 操作：
+```java
+public class StringLock {
+
+  public static String concatString(String s1, String s2, String s3) {
+    StringBuffer sb = new StringBuffer();
+    sb.append(s1);
+    sb.append(s2);
+    sb.append(s3);
+    return sb.toString();
+  }
+}
+```
+每个 append() 中都有一个同步块。
+( StringBuilder 的 append() 没有 synchronized 关键字修饰)
+虚拟机观察变量 sb，很快就会发现它的动态作用域被限制在 concatString() 内部。
+也就是说，sb 的所有引用永远不会逃逸到 concatString() 之外，其它线程无法访问到它，因此可以进行消除。
+
+## 锁粗化
+如果一系列的连续操作都对同一个对象反复加锁和解锁，频繁的加锁操作就会导致性能损耗。
+
+连续的 append() 就属于这一情况。
+如果虚拟机探测到这样的一串零碎的操作都对同一个对象加锁，
+将会把锁的范围扩展（粗化）到整个操作序列的外部。
+对于连续的 append() 就是扩展到第一个 append() 操作之前直至最后一个 append() 操作之后，这样只需加锁一次就行了。
